@@ -24,35 +24,6 @@
       padding-bottom: 8px;
     }
     .subtitle { font-size: 0.9rem; color: #555; margin-bottom: 20px; }
-    .vote-result-realtime {
-      margin-top: 14px;
-      padding: 12px 0 0 0;
-    }
-    .vote-bar-wrap {
-      display: flex;
-      height: 28px;
-      border-radius: 8px;
-      overflow: hidden;
-      background: #e8e4dc;
-      margin-bottom: 8px;
-    }
-    .vote-bar-agree {
-      background: #2e7d32;
-      transition: width 0.25s ease;
-    }
-    .vote-bar-disagree {
-      background: #c62828;
-      transition: width 0.25s ease;
-    }
-    .vote-bar-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #2c1810;
-    }
-    .vote-bar-labels .agree-num { color: #2e7d32; }
-    .vote-bar-labels .disagree-num { color: #c62828; }
     .card {
       background: #fff;
       border-radius: 10px;
@@ -131,30 +102,6 @@
     }
     .post-content p { margin: 0 0 6px 0; }
     .post-meta { font-size: 12px; color: #777; }
-    .vote-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .vote-btn {
-      padding: 6px 14px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-      background: #f5f5f5;
-      cursor: pointer;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .vote-btn.agree { border-color: #2e7d32; color: #2e7d32; }
-    .vote-btn.agree:hover { background: #e8f5e9; }
-    .vote-btn.disagree { border-color: #c62828; color: #c62828; }
-    .vote-btn.disagree:hover { background: #ffebee; }
-    .vote-btn.voted { font-weight: 600; }
-    .vote-btn:disabled { cursor: default; opacity: 0.9; }
-    .vote-count { font-size: 12px; color: #666; }
     .empty-msg { color: #888; text-align: center; padding: 24px; }
     .post-actions { margin-top: 10px; }
     .post-actions .post-btn {
@@ -168,33 +115,39 @@
     }
     .post-actions .post-btn.edit-btn:hover { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
     .post-actions .post-btn.del-btn:hover { background: #ffebee; border-color: #c62828; color: #c62828; }
+    .post-reactions { margin-top: 10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .react-btn {
+      padding: 4px 10px;
+      font-size: 13px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .react-btn:hover { background: #eee; }
+    .react-btn.like-btn.active { background: #e3f2fd; border-color: #1976d2; color: #1976d2; }
+    .react-btn.love-btn.active { background: #fce4ec; border-color: #c2185b; color: #c2185b; }
     .load-err { color: #c62828; padding: 8px 0; font-size: 14px; }
+    .clear-section {
+      margin-top: 32px;
+      padding: 16px;
+      background: #f8f6f0;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .clear-section h3 { font-size: 0.95rem; margin: 0 0 10px 0; color: #555; }
+    .clear-section input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; width: 200px; margin-right: 8px; }
+    .clear-section .btn-clear { background: #8b6914; color: #fff; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .clear-section .btn-clear:hover { background: #6d5210; }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <h1>ASC3 & ATF Job Promotion & Enlargement Pitching</h1>
-  <p class="subtitle">กระดานแสดงความคิดเห็นแบบไม่ระบุตัวตน — ไม่เก็บข้อมูลผู้โพสต์</p>
-
-  <div class="card vote-card">
-    <h2 style="font-size:1rem; margin:0 0 10px 0;">โหวตหัวข้อ (เซสชันนี้โหวต/เปลี่ยนได้ — ปิดแท็บแล้วแก้ไม่ได้)</h2>
-    <div class="vote-row" id="topicVoteRow">
-      <button type="button" class="vote-btn agree" id="btnVoteAgree">เห็นด้วย <span class="vote-count" id="countAgree">(0)</span></button>
-      <button type="button" class="vote-btn disagree" id="btnVoteDisagree">ไม่เห็นด้วย <span class="vote-count" id="countDisagree">(0)</span></button>
-    </div>
-    <div class="vote-result-realtime" id="voteResultRealtime" aria-live="polite">
-      <p style="margin:0 0 8px 0; font-size:0.9rem; color:#555;">ผลโหวตปัจจุบัน</p>
-      <div class="vote-bar-wrap">
-        <div class="vote-bar-agree" id="barAgree" style="width:50%;" title="เห็นด้วย"></div>
-        <div class="vote-bar-disagree" id="barDisagree" style="width:50%;" title="ไม่เห็นด้วย"></div>
-      </div>
-      <div class="vote-bar-labels">
-        <span><span class="agree-num" id="resultAgree">0</span> เห็นด้วย</span>
-        <span><span class="disagree-num" id="resultDisagree">0</span> ไม่เห็นด้วย</span>
-      </div>
-    </div>
-    <p class="vote-done-msg" id="voteDoneMsg" style="display:none; margin:10px 0 0 0; font-size:14px; color:#2e7d32;"></p>
-  </div>
+  <p class="subtitle">กระดานแสดงความคิดเห็น / Feedback แบบไม่ระบุตัวตน — ไม่เก็บข้อมูลผู้โพสต์</p>
 
   <div class="card">
     <div class="toolbar">
@@ -237,6 +190,13 @@
 
   <h2 style="font-size:1.1rem; margin-bottom:10px;">แสดงความคิดเห็น (โพสได้ไม่จำกัด)</h2>
   <div id="posts"></div>
+
+  <div class="clear-section">
+    <h3>ผู้ดูแล: ล้างความเห็นทั้งหมดเพื่อเริ่มใหม่</h3>
+    <input type="password" id="clearSecret" placeholder="รหัสล้างข้อมูล" autocomplete="off" />
+    <button type="button" class="btn-clear" id="btnClear">ล้างข้อมูลและเริ่มใหม่</button>
+    <p style="margin:10px 0 0 0; font-size:12px; color:#777;">ตั้งค่า CLEAR_SECRET ใน Railway (หรือ .env) แล้วกรอกรหัสตรงนี้</p>
+  </div>
 
   <script>
     (function () {
@@ -440,11 +400,18 @@
           var actionsHtml = isMine
             ? '<div class="post-actions"><button type="button" class="post-btn edit-btn" data-id="' + p.id + '">แก้ไข</button><button type="button" class="post-btn del-btn" data-id="' + p.id + '">ลบ</button></div>'
             : '';
+          var likeCls = (p.liked ? ' like-btn active' : ' like-btn');
+          var loveCls = (p.loved ? ' love-btn active' : ' love-btn');
+          var reactionsHtml = '<div class="post-reactions">' +
+            '<button type="button" class="react-btn' + likeCls + '" data-id="' + p.id + '" title="Like">👍 Like <span>' + (p.likes || 0) + '</span></button>' +
+            '<button type="button" class="react-btn' + loveCls + '" data-id="' + p.id + '" title="Love">❤️ Love <span>' + (p.loves || 0) + '</span></button>' +
+            '</div>';
           return (
             '<div class="post" data-id="' + p.id + '">' +
               '<div class="post-content">' + p.content + '</div>' +
               '<div class="post-meta">' + meta + '</div>' +
               actionsHtml +
+              reactionsHtml +
             '</div>'
           );
         }).join('');
@@ -455,10 +422,17 @@
         postsEl.querySelectorAll('.del-btn').forEach(function (btn) {
           btn.addEventListener('click', function () { deletePost(this.dataset.id); });
         });
+        postsEl.querySelectorAll('.react-btn.like-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () { toggleLike(this.dataset.id); });
+        });
+        postsEl.querySelectorAll('.react-btn.love-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () { toggleLove(this.dataset.id); });
+        });
       }
 
       function loadPosts() {
-        api('/api/posts')
+        var token = getSessionToken();
+        api('/api/posts?token=' + encodeURIComponent(token))
           .then(function (data) {
             renderPosts(data.posts || []);
           })
@@ -467,7 +441,39 @@
           });
       }
 
-      loadVote();
+      function toggleLike(postId) {
+        var token = getSessionToken();
+        api('/api/posts/' + postId + '/like', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ authorToken: token })
+        }).then(function () { loadPosts(); }).catch(function (e) { alert('ไม่สำเร็จ: ' + e.message); });
+      }
+
+      function toggleLove(postId) {
+        var token = getSessionToken();
+        api('/api/posts/' + postId + '/love', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ authorToken: token })
+        }).then(function () { loadPosts(); }).catch(function (e) { alert('ไม่สำเร็จ: ' + e.message); });
+      }
+
+      document.getElementById('btnClear').addEventListener('click', function () {
+        var secret = document.getElementById('clearSecret').value.trim();
+        if (!secret) { alert('กรอกรหัสล้างข้อมูล'); return; }
+        api('/api/clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret: secret })
+        }).then(function () {
+          alert('ล้างข้อมูลเรียบร้อย กำลังโหลดหน้าใหม่');
+          location.reload();
+        }).catch(function (e) {
+          alert('ล้างไม่สำเร็จ: ' + (e.message || 'รหัสไม่ถูกต้องหรือยังไม่ได้ตั้ง CLEAR_SECRET'));
+        });
+      });
+
       loadPosts();
     })();
   </script>

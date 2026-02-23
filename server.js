@@ -14,12 +14,13 @@ function readData() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf8');
-      return JSON.parse(raw);
+      const data = JSON.parse(raw);
+      return { posts: data.posts || [] };
     }
   } catch (e) {
     console.warn('readData error', e.message);
   }
-  return { posts: [], vote: { agree: 0, disagree: 0, byToken: {} } };
+  return { posts: [] };
 }
 
 function writeData(data) {
@@ -32,10 +33,26 @@ function writeData(data) {
   }
 }
 
-// GET /api/posts
+// GET /api/posts?token=xxx  — ส่ง token เพื่อได้ liked/loved ของแต่ละโพสต์
 app.get('/api/posts', (req, res) => {
   const data = readData();
-  res.json({ posts: data.posts || [] });
+  const token = req.query.token || '';
+  const posts = (data.posts || []).map(p => {
+    const likeTokens = Array.isArray(p.likeTokens) ? p.likeTokens : [];
+    const loveTokens = Array.isArray(p.loveTokens) ? p.loveTokens : [];
+    return {
+      id: p.id,
+      content: p.content,
+      at: p.at,
+      editedAt: p.editedAt,
+      authorToken: p.authorToken,
+      likes: Math.max(0, Number(p.likes) || 0),
+      loves: Math.max(0, Number(p.loves) || 0),
+      liked: likeTokens.includes(token),
+      loved: loveTokens.includes(token)
+    };
+  });
+  res.json({ posts });
 });
 
 // POST /api/posts  body: { content, authorToken }
@@ -50,7 +67,11 @@ app.post('/api/posts', (req, res) => {
     id,
     content: content.trim(),
     at: Date.now(),
-    authorToken: authorToken || null
+    authorToken: authorToken || null,
+    likes: 0,
+    loves: 0,
+    likeTokens: [],
+    loveTokens: []
   };
   (data.posts = data.posts || []).unshift(post);
   writeData(data);
@@ -87,37 +108,65 @@ app.delete('/api/posts/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// GET /api/vote?token=xxx  -> { agree, disagree, myVote }
-app.get('/api/vote', (req, res) => {
+function ensureReactions(post) {
+  if (!Array.isArray(post.likeTokens)) post.likeTokens = [];
+  if (!Array.isArray(post.loveTokens)) post.loveTokens = [];
+  post.likes = Math.max(0, post.likeTokens.length);
+  post.loves = Math.max(0, post.loveTokens.length);
+}
+
+// POST /api/posts/:id/like  body: { authorToken }  — สลับ like (กดอีกครั้ง = เอา like ออก)
+app.post('/api/posts/:id/like', (req, res) => {
+  const { id } = req.params;
+  const { authorToken } = req.body || {};
+  if (!authorToken) return res.status(400).json({ error: 'authorToken required' });
   const data = readData();
-  const vote = data.vote || { agree: 0, disagree: 0, byToken: {} };
-  const token = req.query.token || '';
-  const myVote = (vote.byToken || {})[token] || null;
-  res.json({
-    agree: vote.agree || 0,
-    disagree: vote.disagree || 0,
-    myVote
-  });
+  const post = (data.posts || []).find(p => p.id === id);
+  if (!post) return res.status(404).json({ error: 'not found' });
+  ensureReactions(post);
+  const idx = post.likeTokens.indexOf(authorToken);
+  if (idx >= 0) {
+    post.likeTokens.splice(idx, 1);
+  } else {
+    post.likeTokens.push(authorToken);
+  }
+  post.likes = post.likeTokens.length;
+  writeData(data);
+  res.json({ likes: post.likes, liked: post.likeTokens.includes(authorToken) });
 });
 
-// POST /api/vote  body: { authorToken, choice: 'agree'|'disagree' }
-app.post('/api/vote', (req, res) => {
-  const { authorToken, choice } = req.body || {};
-  if (!authorToken || !['agree', 'disagree'].includes(choice)) {
-    return res.status(400).json({ error: 'authorToken and choice (agree|disagree) required' });
-  }
+// POST /api/posts/:id/love  body: { authorToken }  — สลับ love (กดอีกครั้ง = เอา love ออก)
+app.post('/api/posts/:id/love', (req, res) => {
+  const { id } = req.params;
+  const { authorToken } = req.body || {};
+  if (!authorToken) return res.status(400).json({ error: 'authorToken required' });
   const data = readData();
-  const vote = data.vote || { agree: 0, disagree: 0, byToken: {} };
-  vote.byToken = vote.byToken || {};
-  const prev = vote.byToken[authorToken];
-  if (prev) {
-    vote[prev] = Math.max(0, (vote[prev] || 0) - 1);
+  const post = (data.posts || []).find(p => p.id === id);
+  if (!post) return res.status(404).json({ error: 'not found' });
+  ensureReactions(post);
+  const idx = post.loveTokens.indexOf(authorToken);
+  if (idx >= 0) {
+    post.loveTokens.splice(idx, 1);
+  } else {
+    post.loveTokens.push(authorToken);
   }
-  vote[choice] = (vote[choice] || 0) + 1;
-  vote.byToken[authorToken] = choice;
-  data.vote = vote;
+  post.loves = post.loveTokens.length;
   writeData(data);
-  res.json({ agree: vote.agree, disagree: vote.disagree, myVote: choice });
+  res.json({ loves: post.loves, loved: post.loveTokens.includes(authorToken) });
+});
+
+// POST /api/clear  body: { secret }  — ล้างความเห็นทั้งหมด (ต้องตั้ง CLEAR_SECRET ใน env)
+app.post('/api/clear', (req, res) => {
+  const expected = process.env.CLEAR_SECRET;
+  if (!expected) {
+    return res.status(501).json({ error: 'clear not configured (set CLEAR_SECRET)' });
+  }
+  const { secret } = req.body || {};
+  if (secret !== expected) {
+    return res.status(403).json({ error: 'invalid secret' });
+  }
+  writeData({ posts: [] });
+  res.json({ ok: true, message: 'cleared' });
 });
 
 app.listen(PORT, () => {
