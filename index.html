@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASC3 & ATF Job Promotion & Enlargement Pitching - Anonymous Board</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Sarabun', 'Segoe UI', sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f5f0eb;
+      color: #1a1a1a;
+      line-height: 1.5;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #2c1810;
+      margin: 0 0 8px 0;
+      border-bottom: 2px solid #8b6914;
+      padding-bottom: 8px;
+    }
+    .subtitle { font-size: 0.9rem; color: #555; margin-bottom: 20px; }
+    .vote-result-realtime {
+      margin-top: 14px;
+      padding: 12px 0 0 0;
+    }
+    .vote-bar-wrap {
+      display: flex;
+      height: 28px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #e8e4dc;
+      margin-bottom: 8px;
+    }
+    .vote-bar-agree {
+      background: #2e7d32;
+      transition: width 0.25s ease;
+    }
+    .vote-bar-disagree {
+      background: #c62828;
+      transition: width 0.25s ease;
+    }
+    .vote-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #2c1810;
+    }
+    .vote-bar-labels .agree-num { color: #2e7d32; }
+    .vote-bar-labels .disagree-num { color: #c62828; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e0e0e0;
+      margin-bottom: 10px;
+    }
+    .toolbar button, .toolbar select {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fafafa;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .toolbar button:hover { background: #eee; }
+    .toolbar select { min-width: 80px; }
+    #editor {
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      margin-bottom: 10px;
+      outline: none;
+      font-size: 15px;
+    }
+    #editor:empty::before { content: 'เขียนความเห็นที่นี่...'; color: #999; }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-preview { background: #e8e4dc; color: #333; }
+    .btn-submit { background: #8b6914; color: #fff; }
+    .btn-preview:hover { background: #ddd; }
+    .btn-submit:hover { background: #6d5210; }
+    #previewBox {
+      display: none;
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px dashed #8b6914;
+      border-radius: 8px;
+      background: #fdfcf9;
+      min-height: 40px;
+    }
+    #previewBox.show { display: block; }
+    .post {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      border-left: 4px solid #8b6914;
+    }
+    .post-content {
+      margin-bottom: 12px;
+      word-break: break-word;
+      font-size: 15px;
+    }
+    .post-content p { margin: 0 0 6px 0; }
+    .post-meta { font-size: 12px; color: #777; }
+    .vote-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .vote-btn {
+      padding: 6px 14px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      background: #f5f5f5;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .vote-btn.agree { border-color: #2e7d32; color: #2e7d32; }
+    .vote-btn.agree:hover { background: #e8f5e9; }
+    .vote-btn.disagree { border-color: #c62828; color: #c62828; }
+    .vote-btn.disagree:hover { background: #ffebee; }
+    .vote-btn.voted { font-weight: 600; }
+    .vote-btn:disabled { cursor: default; opacity: 0.9; }
+    .vote-count { font-size: 12px; color: #666; }
+    .empty-msg { color: #888; text-align: center; padding: 24px; }
+    .post-actions { margin-top: 10px; }
+    .post-actions .post-btn {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background: #f5f5f5;
+      cursor: pointer;
+      margin-right: 6px;
+    }
+    .post-actions .post-btn.edit-btn:hover { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
+    .post-actions .post-btn.del-btn:hover { background: #ffebee; border-color: #c62828; color: #c62828; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <h1>ASC3 & ATF Job Promotion & Enlargement Pitching</h1>
+  <p class="subtitle">กระดานแสดงความคิดเห็นแบบไม่ระบุตัวตน — ไม่เก็บข้อมูลผู้โพสต์</p>
+
+  <div class="card vote-card">
+    <h2 style="font-size:1rem; margin:0 0 10px 0;">โหวตหัวข้อ (เซสชันนี้โหวต/เปลี่ยนได้ — ปิดแท็บแล้วแก้ไม่ได้)</h2>
+    <div class="vote-row" id="topicVoteRow">
+      <button type="button" class="vote-btn agree" id="btnVoteAgree">เห็นด้วย <span class="vote-count" id="countAgree">(0)</span></button>
+      <button type="button" class="vote-btn disagree" id="btnVoteDisagree">ไม่เห็นด้วย <span class="vote-count" id="countDisagree">(0)</span></button>
+    </div>
+    <div class="vote-result-realtime" id="voteResultRealtime" aria-live="polite">
+      <p style="margin:0 0 8px 0; font-size:0.9rem; color:#555;">ผลโหวตปัจจุบัน</p>
+      <div class="vote-bar-wrap">
+        <div class="vote-bar-agree" id="barAgree" style="width:50%;" title="เห็นด้วย"></div>
+        <div class="vote-bar-disagree" id="barDisagree" style="width:50%;" title="ไม่เห็นด้วย"></div>
+      </div>
+      <div class="vote-bar-labels">
+        <span><span class="agree-num" id="resultAgree">0</span> เห็นด้วย</span>
+        <span><span class="disagree-num" id="resultDisagree">0</span> ไม่เห็นด้วย</span>
+      </div>
+    </div>
+    <p class="vote-done-msg" id="voteDoneMsg" style="display:none; margin:10px 0 0 0; font-size:14px; color:#2e7d32;"></p>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <button type="button" data-cmd="bold" title="ตัวหนา">B</button>
+      <button type="button" data-cmd="italic" title="ตัวเอียง">I</button>
+      <button type="button" data-cmd="underline" title="ขีดเส้นใต้">U</button>
+      <select data-cmd="fontSize" title="ขนาดตัวอักษร">
+        <option value="">ขนาด</option>
+        <option value="1">เล็กมาก</option>
+        <option value="2">เล็ก</option>
+        <option value="3">ปกติ</option>
+        <option value="4">ใหญ่</option>
+        <option value="5">ใหญ่มาก</option>
+      </select>
+      <select data-cmd="foreColor" title="สีตัวอักษร">
+        <option value="">สีตัวอักษร</option>
+        <option value="#000000">ดำ</option>
+        <option value="#c62828">แดง</option>
+        <option value="#1565c0">น้ำเงิน</option>
+        <option value="#2e7d32">เขียว</option>
+        <option value="#6a1b9a">ม่วง</option>
+        <option value="#e65100">ส้ม</option>
+      </select>
+      <select data-cmd="hiliteColor" title="สีพื้นหลัง">
+        <option value="">ไฮไลต์</option>
+        <option value="#fff59d">เหลือง</option>
+        <option value="#c8e6c9">เขียวอ่อน</option>
+        <option value="#bbdefb">ฟ้าอ่อน</option>
+      </select>
+    </div>
+    <div id="editor" contenteditable="true"></div>
+    <div class="actions" id="submitActions">
+      <button type="button" class="btn btn-preview" id="btnPreview">ดูตัวอย่าง</button>
+      <button type="button" class="btn btn-submit" id="btnSubmit">ส่งความเห็น</button>
+      <button type="button" class="btn btn-preview" id="btnSaveEdit" style="display:none;">บันทึกการแก้ไข</button>
+      <button type="button" class="btn btn-preview" id="btnCancelEdit" style="display:none;">ยกเลิก</button>
+    </div>
+    <div id="previewBox" aria-live="polite"></div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin-bottom:10px;">แสดงความคิดเห็น (โพสได้ไม่จำกัด)</h2>
+  <div id="posts"></div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'asc3_anonymous_board';
+      const VOTE_STORAGE_KEY = 'asc3_topic_vote';
+      const MY_VOTE_SESSION_KEY = 'asc3_my_vote';
+      const SESSION_TOKEN_KEY = 'asc3_session_token';
+
+      function getSessionToken() {
+        var token = sessionStorage.getItem(SESSION_TOKEN_KEY);
+        if (!token) {
+          token = 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+          sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+        }
+        return token;
+      }
+
+      function getPosts() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function getTopicVote() {
+        try {
+          var raw = localStorage.getItem(VOTE_STORAGE_KEY);
+          var data = raw ? JSON.parse(raw) : { agree: 0, disagree: 0 };
+          return { agree: data.agree || 0, disagree: data.disagree || 0 };
+        } catch (_) {
+          return { agree: 0, disagree: 0 };
+        }
+      }
+
+      function getMyVote() {
+        return sessionStorage.getItem(MY_VOTE_SESSION_KEY) || null;
+      }
+
+      function savePosts(posts) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+      }
+
+      function saveTopicVote(data) {
+        localStorage.setItem(VOTE_STORAGE_KEY, JSON.stringify({ agree: data.agree || 0, disagree: data.disagree || 0 }));
+      }
+
+      const editor = document.getElementById('editor');
+      const previewBox = document.getElementById('previewBox');
+      const postsEl = document.getElementById('posts');
+      const btnPreview = document.getElementById('btnPreview');
+      const btnSubmit = document.getElementById('btnSubmit');
+      const btnVoteAgree = document.getElementById('btnVoteAgree');
+      const btnVoteDisagree = document.getElementById('btnVoteDisagree');
+      const countAgree = document.getElementById('countAgree');
+      const countDisagree = document.getElementById('countDisagree');
+      const resultAgree = document.getElementById('resultAgree');
+      const resultDisagree = document.getElementById('resultDisagree');
+      const barAgree = document.getElementById('barAgree');
+      const barDisagree = document.getElementById('barDisagree');
+      const voteDoneMsg = document.getElementById('voteDoneMsg');
+      const btnSaveEdit = document.getElementById('btnSaveEdit');
+      const btnCancelEdit = document.getElementById('btnCancelEdit');
+      var editingPostId = null;
+
+      function renderTopicVote() {
+        var v = getTopicVote();
+        var myVote = getMyVote();
+        var total = v.agree + v.disagree;
+        var agreePct = total > 0 ? (v.agree / total) * 100 : 50;
+        var disagreePct = total > 0 ? (v.disagree / total) * 100 : 50;
+        countAgree.textContent = '(' + v.agree + ')';
+        countDisagree.textContent = '(' + v.disagree + ')';
+        if (resultAgree) resultAgree.textContent = v.agree;
+        if (resultDisagree) resultDisagree.textContent = v.disagree;
+        if (barAgree) barAgree.style.width = agreePct + '%';
+        if (barDisagree) barDisagree.style.width = disagreePct + '%';
+        btnVoteAgree.disabled = false;
+        btnVoteDisagree.disabled = false;
+        if (myVote === 'agree') {
+          btnVoteAgree.classList.add('voted');
+          btnVoteDisagree.classList.remove('voted');
+          voteDoneMsg.style.display = 'block';
+          voteDoneMsg.textContent = 'คุณโหวตแล้ว: เห็นด้วย (กดปุ่มอีกข้างเพื่อเปลี่ยน)';
+        } else if (myVote === 'disagree') {
+          btnVoteDisagree.classList.add('voted');
+          btnVoteAgree.classList.remove('voted');
+          voteDoneMsg.style.display = 'block';
+          voteDoneMsg.textContent = 'คุณโหวตแล้ว: ไม่เห็นด้วย (กดปุ่มอีกข้างเพื่อเปลี่ยน)';
+        } else {
+          btnVoteAgree.classList.remove('voted');
+          btnVoteDisagree.classList.remove('voted');
+          voteDoneMsg.style.display = 'none';
+        }
+      }
+
+      function doTopicVote(type) {
+        var v = getTopicVote();
+        var myVote = getMyVote();
+        if (myVote === type) return;
+        if (myVote) {
+          v[myVote] = Math.max(0, v[myVote] - 1);
+        }
+        v[type] = (v[type] || 0) + 1;
+        saveTopicVote(v);
+        sessionStorage.setItem(MY_VOTE_SESSION_KEY, type);
+        renderTopicVote();
+      }
+
+      btnVoteAgree.addEventListener('click', function () { doTopicVote('agree'); });
+      btnVoteDisagree.addEventListener('click', function () { doTopicVote('disagree'); });
+
+      document.querySelectorAll('.toolbar [data-cmd]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          const cmd = this.dataset.cmd;
+          if (cmd) document.execCommand(cmd, false, null);
+          editor.focus();
+        });
+      });
+      document.querySelectorAll('.toolbar select[data-cmd]').forEach(function (el) {
+        el.addEventListener('change', function () {
+          const cmd = this.dataset.cmd;
+          const value = this.value;
+          if (cmd && value) document.execCommand(cmd, false, value);
+          this.selectedIndex = 0;
+          editor.focus();
+        });
+      });
+
+      btnPreview.addEventListener('click', function () {
+        const html = editor.innerHTML.trim();
+        if (!html) {
+          previewBox.innerHTML = '<em>ยังไม่มีข้อความ</em>';
+        } else {
+          previewBox.innerHTML = html;
+        }
+        previewBox.classList.add('show');
+      });
+
+      function addPost(html) {
+        var posts = getPosts();
+        var id = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+        posts.unshift({ id: id, content: html, at: Date.now(), authorToken: getSessionToken() });
+        savePosts(posts);
+        editor.innerHTML = '';
+        previewBox.classList.remove('show');
+        cancelEditMode();
+        renderPosts();
+      }
+
+      function cancelEditMode() {
+        editingPostId = null;
+        editor.innerHTML = '';
+        previewBox.classList.remove('show');
+        btnSubmit.style.display = '';
+        btnPreview.style.display = '';
+        btnSaveEdit.style.display = 'none';
+        btnCancelEdit.style.display = 'none';
+      }
+
+      function startEditMode(postId) {
+        var posts = getPosts();
+        var p = posts.find(function (x) { return x.id === postId; });
+        if (!p || p.authorToken !== getSessionToken()) return;
+        editingPostId = postId;
+        editor.innerHTML = p.content;
+        btnSubmit.style.display = 'none';
+        btnPreview.style.display = 'none';
+        btnSaveEdit.style.display = '';
+        btnCancelEdit.style.display = '';
+      }
+
+      function saveEdit() {
+        if (!editingPostId) return;
+        var html = editor.innerHTML.trim().replace(/^<p><br><\/p>$/i, '').replace(/<p><br><\/p>$/i, '');
+        if (!html) return;
+        var posts = getPosts();
+        var p = posts.find(function (x) { return x.id === editingPostId; });
+        if (!p || p.authorToken !== getSessionToken()) { cancelEditMode(); renderPosts(); return; }
+        p.content = html;
+        p.editedAt = Date.now();
+        savePosts(posts);
+        cancelEditMode();
+        renderPosts();
+      }
+
+      function deletePost(postId) {
+        if (!confirm('ต้องการลบความเห็นนี้?')) return;
+        var posts = getPosts();
+        var p = posts.find(function (x) { return x.id === postId; });
+        if (!p || p.authorToken !== getSessionToken()) return;
+        posts = posts.filter(function (x) { return x.id !== postId; });
+        savePosts(posts);
+        if (editingPostId === postId) cancelEditMode();
+        renderPosts();
+      }
+
+      btnSubmit.addEventListener('click', function () {
+        var html = editor.innerHTML.trim().replace(/^<p><br><\/p>$/i, '').replace(/<p><br><\/p>$/i, '');
+        if (!html) return;
+        addPost(html);
+      });
+
+      btnSaveEdit.addEventListener('click', saveEdit);
+      btnCancelEdit.addEventListener('click', cancelEditMode);
+
+      function renderPosts() {
+        var posts = getPosts();
+        var myToken = getSessionToken();
+        if (posts.length === 0) {
+          postsEl.innerHTML = '<p class="empty-msg">ยังไม่มีความเห็น — ส่งความเห็นได้ไม่จำกัด</p>';
+          return;
+        }
+        postsEl.innerHTML = posts.map(function (p) {
+          var timeStr = new Date(p.at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+          var meta = 'โพสเมื่อ ' + timeStr;
+          if (p.editedAt) meta += ' (แก้ไขเมื่อ ' + new Date(p.editedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) + ')';
+          var isMine = p.authorToken && p.authorToken === myToken;
+          var actionsHtml = isMine
+            ? '<div class="post-actions"><button type="button" class="post-btn edit-btn" data-id="' + p.id + '">แก้ไข</button><button type="button" class="post-btn del-btn" data-id="' + p.id + '">ลบ</button></div>'
+            : '';
+          return (
+            '<div class="post" data-id="' + p.id + '">' +
+              '<div class="post-content">' + p.content + '</div>' +
+              '<div class="post-meta">' + meta + '</div>' +
+              actionsHtml +
+            '</div>'
+          );
+        }).join('');
+
+        postsEl.querySelectorAll('.edit-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () { startEditMode(this.dataset.id); });
+        });
+        postsEl.querySelectorAll('.del-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () { deletePost(this.dataset.id); });
+        });
+      }
+
+      function updateClock() {
+        var el = document.getElementById('clockTime');
+        if (el) {
+          var now = new Date();
+          el.textContent = now.toLocaleString('th-TH', {
+            dateStyle: 'medium',
+            timeStyle: 'medium',
+            hour12: false
+          });
+        }
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      renderTopicVote();
+      renderPosts();
+    })();
+  </script>
+</body>
+</html>
