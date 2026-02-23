@@ -144,8 +144,9 @@
     .clear-section .btn-clear:hover { background: #6d5210; }
     .reply-bar { margin-top: 12px; padding: 8px 12px; background: #e8f5e9; border-radius: 8px; font-size: 14px; color: #2e7d32; }
     .reply-bar .reply-cancel-btn { margin-left: 8px; padding: 4px 10px; font-size: 12px; }
-    .post-reply { margin-left: 24px; border-left: 3px solid #8b6914; padding-left: 12px; }
+    .post-reply { margin-top: 8px; }
     .post-reply .post-content { font-size: 14px; }
+    .post-replies { margin-left: 24px; margin-top: 8px; padding-left: 12px; border-left: 2px solid #e0e0e0; }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -407,6 +408,19 @@
         );
       }
 
+      function renderPostWithReplies(p, myToken, byParent) {
+        var html = renderPostOne(p, myToken, !!p.parentId);
+        var children = (byParent[p.id] || []).sort(function (a, b) { return a.at - b.at; });
+        if (children.length) {
+          html += '<div class="post-replies">';
+          children.forEach(function (child) {
+            html += renderPostWithReplies(child, myToken, byParent);
+          });
+          html += '</div>';
+        }
+        return html;
+      }
+
       function renderPosts(posts) {
         var myToken = getSessionToken();
         if (!posts || posts.length === 0) {
@@ -421,13 +435,9 @@
             byParent[p.parentId].push(p);
           }
         });
-        Object.keys(byParent).forEach(function (pid) { byParent[pid].sort(function (a, b) { return a.at - b.at; }); });
         var html = '';
         topLevel.forEach(function (p) {
-          html += renderPostOne(p, myToken, false);
-          (byParent[p.id] || []).forEach(function (r) {
-            html += renderPostOne(r, myToken, true);
-          });
+          html += renderPostWithReplies(p, myToken, byParent);
         });
         postsEl.innerHTML = html;
 
