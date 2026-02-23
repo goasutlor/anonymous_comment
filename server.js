@@ -159,11 +159,14 @@ app.post('/api/posts/:id/love', (req, res) => {
   res.json({ loves: post.loves, loved: post.loveTokens.includes(authorToken) });
 });
 
-// POST /api/clear  body: { secret }  — ล้างความเห็นทั้งหมด (ต้องตั้ง CLEAR_SECRET ใน env)
+// POST /api/clear  body: { secret }  — ล้างความเห็นทั้งหมด (ต้องตั้ง CLEAR_SECRET ใน env แล้ว Redeploy)
 app.post('/api/clear', (req, res) => {
   const expected = process.env.CLEAR_SECRET;
-  if (!expected) {
-    return res.status(501).json({ error: 'clear not configured (set CLEAR_SECRET)' });
+  if (!expected || String(expected).trim() === '') {
+    return res.status(501).json({
+      error: 'clear not configured',
+      hint: 'ตั้ง CLEAR_SECRET ใน Railway → Variables แล้วกด Redeploy (Deployments → ⋮ → Redeploy)'
+    });
   }
   const { secret } = req.body || {};
   if (secret !== expected) {
