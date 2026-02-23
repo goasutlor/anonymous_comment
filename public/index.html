@@ -142,6 +142,10 @@
     .clear-section input { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; width: 200px; margin-right: 8px; }
     .clear-section .btn-clear { background: #8b6914; color: #fff; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .clear-section .btn-clear:hover { background: #6d5210; }
+    .reply-bar { margin-top: 12px; padding: 8px 12px; background: #e8f5e9; border-radius: 8px; font-size: 14px; color: #2e7d32; }
+    .reply-bar .reply-cancel-btn { margin-left: 8px; padding: 4px 10px; font-size: 12px; }
+    .post-reply { margin-left: 24px; border-left: 3px solid #8b6914; padding-left: 12px; }
+    .post-reply .post-content { font-size: 14px; }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -186,6 +190,7 @@
       <button type="button" class="btn btn-preview" id="btnCancelEdit" style="display:none;">ยกเลิก</button>
     </div>
     <div id="previewBox" aria-live="polite"></div>
+    <div id="replyBar" class="reply-bar" style="display:none;">กำลังตอบกลับความเห็นนี้ <button type="button" class="post-btn reply-cancel-btn" id="btnReplyCancel">ยกเลิก</button></div>
   </div>
 
   <h2 style="font-size:1.1rem; margin-bottom:10px;">แสดงความคิดเห็น (โพสได้ไม่จำกัด)</h2>
@@ -238,7 +243,10 @@
       var btnSubmit = document.getElementById('btnSubmit');
       var btnSaveEdit = document.getElementById('btnSaveEdit');
       var btnCancelEdit = document.getElementById('btnCancelEdit');
+      var replyBar = document.getElementById('replyBar');
+      var btnReplyCancel = document.getElementById('btnReplyCancel');
       var editingPostId = null;
+      var replyingToId = null;
 
       if (!editor || !btnSubmit || !postsEl) {
         if (postsEl) postsEl.innerHTML = '<p class="load-err">โหลดหน้าไม่ครบ — กรุณาเปิดผ่าน http://localhost:3000 (รัน npm start ก่อน)</p>';
@@ -271,22 +279,31 @@
         });
       }
 
+      function cancelReplyMode() {
+        replyingToId = null;
+        if (replyBar) replyBar.style.display = 'none';
+      }
+
       function addPost(html) {
         var token = getSessionToken();
+        var body = { content: html, authorToken: token };
+        if (replyingToId) body.parentId = replyingToId;
         api('/api/posts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: html, authorToken: token })
+          body: JSON.stringify(body)
         }).then(function () {
           if (editor) editor.innerHTML = '';
           if (previewBox) previewBox.classList.remove('show');
           cancelEditMode();
+          cancelReplyMode();
           loadPosts();
         }).catch(function (e) { alert('ส่งความเห็นไม่สำเร็จ: ' + e.message); });
       }
 
       function cancelEditMode() {
         editingPostId = null;
+        cancelReplyMode();
         if (editor) editor.innerHTML = '';
         if (previewBox) previewBox.classList.remove('show');
         if (btnSubmit) btnSubmit.style.display = '';
@@ -363,35 +380,56 @@
       if (btnSaveEdit) btnSaveEdit.addEventListener('click', saveEdit);
       if (btnCancelEdit) btnCancelEdit.addEventListener('click', cancelEditMode);
 
+      function renderPostOne(p, myToken, isReply) {
+        var timeStr = new Date(p.at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+        var meta = 'โพสเมื่อ ' + timeStr;
+        if (p.editedAt) meta += ' (แก้ไขเมื่อ ' + new Date(p.editedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) + ')';
+        var isMine = p.authorToken && p.authorToken === myToken;
+        var actionsHtml = isMine
+          ? '<div class="post-actions"><button type="button" class="post-btn edit-btn" data-id="' + p.id + '">แก้ไข</button><button type="button" class="post-btn del-btn" data-id="' + p.id + '">ลบ</button></div>'
+          : '';
+        var replyBtnHtml = '<button type="button" class="post-btn reply-btn" data-id="' + p.id + '">ตอบกลับ</button>';
+        var likeCls = (p.liked ? ' like-btn active' : ' like-btn');
+        var loveCls = (p.loved ? ' love-btn active' : ' love-btn');
+        var reactionsHtml = '<div class="post-reactions">' +
+          replyBtnHtml +
+          '<button type="button" class="react-btn' + likeCls + '" data-id="' + p.id + '" title="Like">👍 Like <span>' + (p.likes || 0) + '</span></button>' +
+          '<button type="button" class="react-btn' + loveCls + '" data-id="' + p.id + '" title="Love">❤️ Love <span>' + (p.loves || 0) + '</span></button>' +
+          '</div>';
+        var wrapCls = 'post' + (isReply ? ' post-reply' : '');
+        return (
+          '<div class="' + wrapCls + '" data-id="' + p.id + '">' +
+            '<div class="post-content">' + p.content + '</div>' +
+            '<div class="post-meta">' + meta + '</div>' +
+            actionsHtml +
+            reactionsHtml +
+          '</div>'
+        );
+      }
+
       function renderPosts(posts) {
         var myToken = getSessionToken();
         if (!posts || posts.length === 0) {
           postsEl.innerHTML = '<p class="empty-msg">ยังไม่มีความเห็น — ส่งความเห็นได้ไม่จำกัด</p>';
           return;
         }
-        postsEl.innerHTML = posts.map(function (p) {
-          var timeStr = new Date(p.at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
-          var meta = 'โพสเมื่อ ' + timeStr;
-          if (p.editedAt) meta += ' (แก้ไขเมื่อ ' + new Date(p.editedAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) + ')';
-          var isMine = p.authorToken && p.authorToken === myToken;
-          var actionsHtml = isMine
-            ? '<div class="post-actions"><button type="button" class="post-btn edit-btn" data-id="' + p.id + '">แก้ไข</button><button type="button" class="post-btn del-btn" data-id="' + p.id + '">ลบ</button></div>'
-            : '';
-          var likeCls = (p.liked ? ' like-btn active' : ' like-btn');
-          var loveCls = (p.loved ? ' love-btn active' : ' love-btn');
-          var reactionsHtml = '<div class="post-reactions">' +
-            '<button type="button" class="react-btn' + likeCls + '" data-id="' + p.id + '" title="Like">👍 Like <span>' + (p.likes || 0) + '</span></button>' +
-            '<button type="button" class="react-btn' + loveCls + '" data-id="' + p.id + '" title="Love">❤️ Love <span>' + (p.loves || 0) + '</span></button>' +
-            '</div>';
-          return (
-            '<div class="post" data-id="' + p.id + '">' +
-              '<div class="post-content">' + p.content + '</div>' +
-              '<div class="post-meta">' + meta + '</div>' +
-              actionsHtml +
-              reactionsHtml +
-            '</div>'
-          );
-        }).join('');
+        var topLevel = posts.filter(function (p) { return !p.parentId; }).sort(function (a, b) { return b.at - a.at; });
+        var byParent = {};
+        posts.forEach(function (p) {
+          if (p.parentId) {
+            if (!byParent[p.parentId]) byParent[p.parentId] = [];
+            byParent[p.parentId].push(p);
+          }
+        });
+        Object.keys(byParent).forEach(function (pid) { byParent[pid].sort(function (a, b) { return a.at - b.at; }); });
+        var html = '';
+        topLevel.forEach(function (p) {
+          html += renderPostOne(p, myToken, false);
+          (byParent[p.id] || []).forEach(function (r) {
+            html += renderPostOne(r, myToken, true);
+          });
+        });
+        postsEl.innerHTML = html;
 
         postsEl.querySelectorAll('.edit-btn').forEach(function (btn) {
           btn.addEventListener('click', function () { startEditMode(this.dataset.id, posts); });
@@ -399,12 +437,23 @@
         postsEl.querySelectorAll('.del-btn').forEach(function (btn) {
           btn.addEventListener('click', function () { deletePost(this.dataset.id); });
         });
+        postsEl.querySelectorAll('.reply-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            replyingToId = this.dataset.id;
+            if (replyBar) replyBar.style.display = 'block';
+            if (editor) editor.focus();
+          });
+        });
         postsEl.querySelectorAll('.react-btn.like-btn').forEach(function (btn) {
           btn.addEventListener('click', function () { toggleLike(this.dataset.id); });
         });
         postsEl.querySelectorAll('.react-btn.love-btn').forEach(function (btn) {
           btn.addEventListener('click', function () { toggleLove(this.dataset.id); });
         });
+      }
+
+      if (btnReplyCancel) {
+        btnReplyCancel.addEventListener('click', cancelReplyMode);
       }
 
       function loadPosts() {

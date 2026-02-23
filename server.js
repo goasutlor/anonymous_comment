@@ -46,6 +46,7 @@ app.get('/api/posts', (req, res) => {
       at: p.at,
       editedAt: p.editedAt,
       authorToken: p.authorToken,
+      parentId: p.parentId || null,
       likes: Math.max(0, Number(p.likes) || 0),
       loves: Math.max(0, Number(p.loves) || 0),
       liked: likeTokens.includes(token),
@@ -55,9 +56,9 @@ app.get('/api/posts', (req, res) => {
   res.json({ posts });
 });
 
-// POST /api/posts  body: { content, authorToken }
+// POST /api/posts  body: { content, authorToken, parentId? }
 app.post('/api/posts', (req, res) => {
-  const { content, authorToken } = req.body || {};
+  const { content, authorToken, parentId } = req.body || {};
   if (!content || typeof content !== 'string') {
     return res.status(400).json({ error: 'content required' });
   }
@@ -66,18 +67,25 @@ app.post('/api/posts', (req, res) => {
     return res.status(400).json({ error: 'content required' });
   }
   const data = readData();
+  const posts = data.posts || [];
+  if (parentId) {
+    const parent = posts.find(p => p.id === parentId);
+    if (!parent) return res.status(400).json({ error: 'parent not found' });
+  }
   const id = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
   const post = {
     id,
     content: content.trim(),
     at: Date.now(),
     authorToken: authorToken || null,
+    parentId: parentId || null,
     likes: 0,
     loves: 0,
     likeTokens: [],
     loveTokens: []
   };
-  (data.posts = data.posts || []).unshift(post);
+  posts.unshift(post);
+  data.posts = posts;
   writeData(data);
   res.status(201).json(post);
 });
