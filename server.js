@@ -58,7 +58,11 @@ app.get('/api/posts', (req, res) => {
 // POST /api/posts  body: { content, authorToken }
 app.post('/api/posts', (req, res) => {
   const { content, authorToken } = req.body || {};
-  if (!content || typeof content !== 'string' || !content.trim()) {
+  if (!content || typeof content !== 'string') {
+    return res.status(400).json({ error: 'content required' });
+  }
+  const textOnly = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!textOnly) {
     return res.status(400).json({ error: 'content required' });
   }
   const data = readData();

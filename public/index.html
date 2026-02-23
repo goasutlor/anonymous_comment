@@ -200,6 +200,17 @@
 
   <script>
     (function () {
+      if (window.location.protocol === 'file:') {
+        document.getElementById('posts').innerHTML =
+          '<p class="load-err" style="margin:20px 0; padding:16px; background:#fff3e0; border-radius:8px;">' +
+          '<strong>เปิดไฟล์โดยตรง (file://) ใช้ไม่ได้</strong><br><br>' +
+          'แอปนี้ต้องรันผ่านเซิร์ฟเวอร์ — ในโฟลเดอร์โปรเจกต์รัน:<br>' +
+          '<code style="background:#fff; padding:4px 8px; border-radius:4px;">npm start</code><br><br>' +
+          'แล้วเปิดในเบราว์เซอร์: <a href="http://localhost:3000">http://localhost:3000</a>' +
+          '</p>';
+        return;
+      }
+
       const SESSION_TOKEN_KEY = 'asc3_session_token';
 
       function getSessionToken() {
@@ -225,78 +236,20 @@
       var postsEl = document.getElementById('posts');
       var btnPreview = document.getElementById('btnPreview');
       var btnSubmit = document.getElementById('btnSubmit');
-      var btnVoteAgree = document.getElementById('btnVoteAgree');
-      var btnVoteDisagree = document.getElementById('btnVoteDisagree');
-      var countAgree = document.getElementById('countAgree');
-      var countDisagree = document.getElementById('countDisagree');
-      var resultAgree = document.getElementById('resultAgree');
-      var resultDisagree = document.getElementById('resultDisagree');
-      var barAgree = document.getElementById('barAgree');
-      var barDisagree = document.getElementById('barDisagree');
-      var voteDoneMsg = document.getElementById('voteDoneMsg');
       var btnSaveEdit = document.getElementById('btnSaveEdit');
       var btnCancelEdit = document.getElementById('btnCancelEdit');
       var editingPostId = null;
 
-      function renderTopicVote(v, myVote) {
-        v = v || { agree: 0, disagree: 0 };
-        myVote = myVote || null;
-        var total = v.agree + v.disagree;
-        var agreePct = total > 0 ? (v.agree / total) * 100 : 50;
-        var disagreePct = total > 0 ? (v.disagree / total) * 100 : 50;
-        countAgree.textContent = '(' + v.agree + ')';
-        countDisagree.textContent = '(' + v.disagree + ')';
-        if (resultAgree) resultAgree.textContent = v.agree;
-        if (resultDisagree) resultDisagree.textContent = v.disagree;
-        if (barAgree) barAgree.style.width = agreePct + '%';
-        if (barDisagree) barDisagree.style.width = disagreePct + '%';
-        btnVoteAgree.disabled = false;
-        btnVoteDisagree.disabled = false;
-        if (myVote === 'agree') {
-          btnVoteAgree.classList.add('voted');
-          btnVoteDisagree.classList.remove('voted');
-          voteDoneMsg.style.display = 'block';
-          voteDoneMsg.textContent = 'คุณโหวตแล้ว: เห็นด้วย (กดปุ่มอีกข้างเพื่อเปลี่ยน)';
-        } else if (myVote === 'disagree') {
-          btnVoteDisagree.classList.add('voted');
-          btnVoteAgree.classList.remove('voted');
-          voteDoneMsg.style.display = 'block';
-          voteDoneMsg.textContent = 'คุณโหวตแล้ว: ไม่เห็นด้วย (กดปุ่มอีกข้างเพื่อเปลี่ยน)';
-        } else {
-          btnVoteAgree.classList.remove('voted');
-          btnVoteDisagree.classList.remove('voted');
-          voteDoneMsg.style.display = 'none';
-        }
+      if (!editor || !btnSubmit || !postsEl) {
+        if (postsEl) postsEl.innerHTML = '<p class="load-err">โหลดหน้าไม่ครบ — กรุณาเปิดผ่าน http://localhost:3000 (รัน npm start ก่อน)</p>';
+        return;
       }
-
-      function loadVote() {
-        var token = getSessionToken();
-        return api('/api/vote?token=' + encodeURIComponent(token))
-          .then(function (data) {
-            renderTopicVote(data, data.myVote);
-          })
-          .catch(function (e) {
-            postsEl.innerHTML = '<p class="load-err">โหลดผลโหวตไม่ได้: ' + e.message + '</p>';
-          });
-      }
-
-      function doTopicVote(type) {
-        var token = getSessionToken();
-        api('/api/vote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ authorToken: token, choice: type })
-        }).then(function () { return loadVote(); }).catch(function (e) { alert('โหวตไม่สำเร็จ: ' + e.message); });
-      }
-
-      btnVoteAgree.addEventListener('click', function () { doTopicVote('agree'); });
-      btnVoteDisagree.addEventListener('click', function () { doTopicVote('disagree'); });
 
       document.querySelectorAll('.toolbar [data-cmd]').forEach(function (el) {
         el.addEventListener('click', function () {
           var cmd = this.dataset.cmd;
           if (cmd) document.execCommand(cmd, false, null);
-          editor.focus();
+          if (editor) editor.focus();
         });
       });
       document.querySelectorAll('.toolbar select[data-cmd]').forEach(function (el) {
@@ -305,16 +258,18 @@
           var value = this.value;
           if (cmd && value) document.execCommand(cmd, false, value);
           this.selectedIndex = 0;
-          editor.focus();
+          if (editor) editor.focus();
         });
       });
 
-      btnPreview.addEventListener('click', function () {
-        var html = editor.innerHTML.trim();
-        if (!html) previewBox.innerHTML = '<em>ยังไม่มีข้อความ</em>';
-        else previewBox.innerHTML = html;
-        previewBox.classList.add('show');
-      });
+      if (btnPreview) {
+        btnPreview.addEventListener('click', function () {
+          var html = editor.innerHTML.trim();
+          if (!html && previewBox) previewBox.innerHTML = '<em>ยังไม่มีข้อความ</em>';
+          else if (previewBox) previewBox.innerHTML = html;
+          if (previewBox) previewBox.classList.add('show');
+        });
+      }
 
       function addPost(html) {
         var token = getSessionToken();
@@ -323,8 +278,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content: html, authorToken: token })
         }).then(function () {
-          editor.innerHTML = '';
-          previewBox.classList.remove('show');
+          if (editor) editor.innerHTML = '';
+          if (previewBox) previewBox.classList.remove('show');
           cancelEditMode();
           loadPosts();
         }).catch(function (e) { alert('ส่งความเห็นไม่สำเร็จ: ' + e.message); });
@@ -332,29 +287,32 @@
 
       function cancelEditMode() {
         editingPostId = null;
-        editor.innerHTML = '';
-        previewBox.classList.remove('show');
-        btnSubmit.style.display = '';
-        btnPreview.style.display = '';
-        btnSaveEdit.style.display = 'none';
-        btnCancelEdit.style.display = 'none';
+        if (editor) editor.innerHTML = '';
+        if (previewBox) previewBox.classList.remove('show');
+        if (btnSubmit) btnSubmit.style.display = '';
+        if (btnPreview) btnPreview.style.display = '';
+        if (btnSaveEdit) btnSaveEdit.style.display = 'none';
+        if (btnCancelEdit) btnCancelEdit.style.display = 'none';
       }
 
       function startEditMode(postId, posts) {
         var p = posts.find(function (x) { return x.id === postId; });
         if (!p || p.authorToken !== getSessionToken()) return;
         editingPostId = postId;
-        editor.innerHTML = p.content;
-        btnSubmit.style.display = 'none';
-        btnPreview.style.display = 'none';
-        btnSaveEdit.style.display = '';
-        btnCancelEdit.style.display = '';
+        if (editor) editor.innerHTML = p.content;
+        if (btnSubmit) btnSubmit.style.display = 'none';
+        if (btnPreview) btnPreview.style.display = 'none';
+        if (btnSaveEdit) btnSaveEdit.style.display = '';
+        if (btnCancelEdit) btnCancelEdit.style.display = '';
       }
 
       function saveEdit() {
         if (!editingPostId) return;
-        var html = editor.innerHTML.trim().replace(/^<p><br><\/p>$/i, '').replace(/<p><br><\/p>$/i, '');
-        if (!html) return;
+        var html = getEditorHtml();
+        if (!hasRealText(html)) {
+          alert('กรุณาใส่ความเห็นก่อนบันทึก');
+          return;
+        }
         var token = getSessionToken();
         api('/api/posts/' + editingPostId, {
           method: 'PUT',
@@ -377,14 +335,33 @@
           .catch(function (e) { alert('ลบไม่สำเร็จ: ' + e.message); });
       }
 
-      btnSubmit.addEventListener('click', function () {
-        var html = editor.innerHTML.trim().replace(/^<p><br><\/p>$/i, '').replace(/<p><br><\/p>$/i, '');
-        if (!html) return;
-        addPost(html);
-      });
+      function getEditorHtml() {
+        var raw = editor.innerHTML.trim();
+        // ลบเฉพาะแท็กว่างที่เบราว์เซอร์ใส่ (หลายรูปแบบ)
+        var emptyTags = /^(<p>\s*<\/p>|<p><br\s*\/?><\/p>|<div>\s*<\/div>|<div><br\s*\/?><\/div>|<br\s*\/?>)\s*$/gi;
+        var html = raw.replace(emptyTags, '').trim();
+        return html;
+      }
 
-      btnSaveEdit.addEventListener('click', saveEdit);
-      btnCancelEdit.addEventListener('click', cancelEditMode);
+      function hasRealText(html) {
+        if (!html) return false;
+        var text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        return text.length > 0;
+      }
+
+      if (btnSubmit) {
+        btnSubmit.addEventListener('click', function () {
+          var html = getEditorHtml();
+          if (!hasRealText(html)) {
+            alert('กรุณาใส่ความเห็นก่อนส่ง');
+            if (editor) editor.focus();
+            return;
+          }
+          addPost(html);
+        });
+      }
+      if (btnSaveEdit) btnSaveEdit.addEventListener('click', saveEdit);
+      if (btnCancelEdit) btnCancelEdit.addEventListener('click', cancelEditMode);
 
       function renderPosts(posts) {
         var myToken = getSessionToken();
@@ -459,20 +436,23 @@
         }).then(function () { loadPosts(); }).catch(function (e) { alert('ไม่สำเร็จ: ' + e.message); });
       }
 
-      document.getElementById('btnClear').addEventListener('click', function () {
-        var secret = document.getElementById('clearSecret').value.trim();
-        if (!secret) { alert('กรอกรหัสล้างข้อมูล'); return; }
-        api('/api/clear', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ secret: secret })
-        }).then(function () {
-          alert('ล้างข้อมูลเรียบร้อย กำลังโหลดหน้าใหม่');
-          location.reload();
-        }).catch(function (e) {
-          alert('ล้างไม่สำเร็จ: ' + (e.message || 'รหัสไม่ถูกต้องหรือยังไม่ได้ตั้ง CLEAR_SECRET'));
+      var btnClear = document.getElementById('btnClear');
+      if (btnClear) {
+        btnClear.addEventListener('click', function () {
+          var secret = (document.getElementById('clearSecret') || {}).value;
+          if (typeof secret !== 'string' || !secret.trim()) { alert('กรอกรหัสล้างข้อมูล'); return; }
+          api('/api/clear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret: secret.trim() })
+          }).then(function () {
+            alert('ล้างข้อมูลเรียบร้อย กำลังโหลดหน้าใหม่');
+            location.reload();
+          }).catch(function (e) {
+            alert('ล้างไม่สำเร็จ: ' + (e.message || 'รหัสไม่ถูกต้องหรือยังไม่ได้ตั้ง CLEAR_SECRET'));
+          });
         });
-      });
+      }
 
       loadPosts();
     })();
